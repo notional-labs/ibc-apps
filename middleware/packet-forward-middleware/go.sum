@@ -391,8 +391,8 @@ github.com/mtibben/percent v0.2.1 h1:5gssi8Nqo8QU/r2pynCm+hBQHpkB/uNK7BJCFogWdzs
 github.com/mtibben/percent v0.2.1/go.mod h1:KG9uO+SZkUp+VkRHsCdYQV3XSZrrSpR3O9ibNBTZrns=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/notional-labs/composable-centauri/v4 v4.0.0-20230719071809-dd43d7a38418 h1:MOOSL8pgc8faNgwEDdKp791vO4b4IRa9homxaRaWu3A=
-github.com/notional-labs/composable-centauri/v4 v4.0.0-20230719071809-dd43d7a38418/go.mod h1:0QRzotjUN86oi4Jz6F5P8clzxHHGxlqwxY2LqCaiuec=
+github.com/notional-labs/composable-centauri/v4 v4.5.1-0.20230809131810-7f9216675de7 h1:MfTg8VR4hIVKMbZ8oxAGgO8BTOsTSApXJAad9Vdd/qo=
+github.com/notional-labs/composable-centauri/v4 v4.5.1-0.20230809131810-7f9216675de7/go.mod h1:0k4arkSwBSFxv5j3U9FntyiSDDriXcZC+iHDico8N3M=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
