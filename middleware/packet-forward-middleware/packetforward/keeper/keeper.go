@@ -299,24 +299,37 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 					panic(fmt.Sprintf("cannot burn coins after a successful send from escrow account to module account: %v", err))
 				}
 			}
-
-			// We move funds from the escrowAddress in both cases,
-			// update the total escrow amount for the denom.
-			k.unescrowToken(ctx, token)
 		} else {
-			// Funds in the escrow account were burned,
-			// so on a timeout or acknowledgement error we need to mint the funds back to the escrow account.
-			if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, newToken); err != nil {
-				return fmt.Errorf("cannot mint coins to the %s module account: %v", transfertypes.ModuleName, err)
-			}
+			// Sender chain is sink
+			denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
+			paraChainIBCTokenInfo, found := k.GetParachainTokenInfoByAssetID(ctx, denomTrace.BaseDenom)
+			if found && (paraChainIBCTokenInfo.ChannelID == packet.SourceChannel) {
+				// This packet is forwared to picasso => Mint Ibc token and native token to escrow address
+				// parse the transfer amount
+				transferAmount, ok := sdk.NewIntFromString(data.Amount)
+				if !ok {
+					return errorsmod.Wrapf(transfertypes.ErrInvalidAmount, "unable to parse transfer amount: %s", data.Amount)
+				}
+				// send native token to native escrow address
+				nativeToken := sdk.NewCoin(paraChainIBCTokenInfo.NativeDenom, transferAmount)
+				nativeEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
+				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(nativeToken)); err != nil {
+					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
+				}
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, nativeEscrowAddress, sdk.NewCoins(nativeToken)); err != nil {
+					panic(err)
+				}
 
-			if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, refundEscrowAddress, newToken); err != nil {
-				return fmt.Errorf("cannot send coins from the %s module to the escrow account %s: %v", transfertypes.ModuleName, refundEscrowAddress, err)
+				// send ibc token to ibc escrow address
+				ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.IbcDenom, transferAmount)
+				ibcEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
+				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(ibcToken)); err != nil {
+					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
+				}
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, ibcEscrowAddress, sdk.NewCoins(ibcToken)); err != nil {
+					panic(err)
+				}
 			}
-
-			currentTotalEscrow := k.transferKeeper.GetTotalEscrowForDenom(ctx, token.GetDenom())
-			newTotalEscrow := currentTotalEscrow.Add(token)
-			k.transferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
 		}
 	}
 
