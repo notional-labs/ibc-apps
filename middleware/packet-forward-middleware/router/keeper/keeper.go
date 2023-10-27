@@ -220,6 +220,37 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 					panic(fmt.Sprintf("cannot burn coins after a successful send from escrow account to module account: %v", err))
 				}
 			}
+		} else {
+			// Sender chain is sink
+			denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
+			paraChainIBCTokenInfo, found := k.GetParachainTokenInfoByAssetID(ctx, denomTrace.BaseDenom)
+			if found && (paraChainIBCTokenInfo.ChannelID == packet.SourceChannel) {
+				// This packet is forwared to picasso => Mint Ibc token and native token to escrow address
+				// parse the transfer amount
+				transferAmount, ok := sdk.NewIntFromString(data.Amount)
+				if !ok {
+					return errorsmod.Wrapf(transfertypes.ErrInvalidAmount, "unable to parse transfer amount: %s", data.Amount)
+				}
+				// send native token to native escrow address
+				nativeToken := sdk.NewCoin(paraChainIBCTokenInfo.NativeDenom, transferAmount)
+				nativeEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
+				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(nativeToken)); err != nil {
+					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
+				}
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, nativeEscrowAddress, sdk.NewCoins(nativeToken)); err != nil {
+					panic(err)
+				}
+
+				// send ibc token to ibc escrow address
+				ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.IbcDenom, transferAmount)
+				ibcEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
+				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(ibcToken)); err != nil {
+					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
+				}
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, ibcEscrowAddress, sdk.NewCoins(ibcToken)); err != nil {
+					panic(err)
+				}
+			}
 		}
 	}
 
