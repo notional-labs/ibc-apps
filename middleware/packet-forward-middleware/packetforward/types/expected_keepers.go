@@ -8,6 +8,7 @@ import (
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v8/modules/core/04-channel/types"
+	transfermiddlewaretypes "github.com/notional-labs/composable/v6/x/transfermiddleware/types"
 )
 
 // TransferKeeper defines the expected transfer keeper
@@ -38,4 +39,11 @@ type BankKeeper interface {
 	SendCoinsFromAccountToModule(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	MintCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
 	BurnCoins(ctx context.Context, moduleName string, amt sdk.Coins) error
+}
+
+type TransferMiddlewareKeeper interface {
+	HasParachainIBCTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) bool
+	HasParachainIBCTokenInfoByAssetID(ctx sdk.Context, assetID string) bool
+	GetParachainIBCTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) transfermiddlewaretypes.ParachainIBCTokenInfo
+	GetParachainIBCTokenInfoByAssetID(ctx sdk.Context, assetID string) transfermiddlewaretypes.ParachainIBCTokenInfo
 }

@@ -228,6 +228,13 @@ func (im IBCMiddleware) OnRecvPacket(
 	// if this packet's token denom is already the base denom for some native token on this chain,
 	// we do not need to do any further composition of the denom before forwarding the packet
 	denomOnThisChain := data.Denom
+	// Check if the packet was sent from Picasso
+	paraChainIBCTokenInfo, found := im.keeper.GetParachainTokenInfoByAssetID(ctx, data.Denom)
+	if found && (paraChainIBCTokenInfo.ChannelID == packet.DestinationChannel) {
+		disableDenomComposition = true
+		denomOnThisChain = paraChainIBCTokenInfo.NativeDenom
+	}
+
 	if !disableDenomComposition {
 		denomOnThisChain = getDenomForThisChain(
 			packet.DestinationPort, packet.DestinationChannel,
