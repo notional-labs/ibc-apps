@@ -34,15 +34,18 @@ func NewTestSetup(t *testing.T, ctl *gomock.Controller) *Setup {
 	channelKeeperMock := mock.NewMockChannelKeeper(ctl)
 	distributionKeeperMock := mock.NewMockDistributionKeeper(ctl)
 	bankKeeperMock := mock.NewMockBankKeeper(ctl)
+	transferMiddlewareKeeperMock := mock.NewMockTransferMiddlewareKeeper(ctl)
 	ibcModuleMock := mock.NewMockIBCModule(ctl)
 	ics4WrapperMock := mock.NewMockICS4Wrapper(ctl)
 
 	paramsKeeper := initializer.paramsKeeper()
-	packetforwardKeeper := initializer.packetforwardKeeper(paramsKeeper, transferKeeperMock, channelKeeperMock, distributionKeeperMock, bankKeeperMock, ics4WrapperMock)
+	packetforwardKeeper := initializer.packetforwardKeeper(paramsKeeper, transferKeeperMock, channelKeeperMock, distributionKeeperMock, bankKeeperMock, transferMiddlewareKeeperMock, ics4WrapperMock)
 
 	require.NoError(t, initializer.StateStore.LoadLatestVersion())
 
-	packetforwardKeeper.SetParams(initializer.Ctx, types.DefaultParams())
+	if err := packetforwardKeeper.SetParams(initializer.Ctx, types.DefaultParams()); err != nil {
+		t.Fatal(err)
+	}
 
 	return &Setup{
 		Initializer: initializer,
@@ -131,21 +134,24 @@ func (i initializer) packetforwardKeeper(
 	channelKeeper types.ChannelKeeper,
 	distributionKeeper types.DistributionKeeper,
 	bankKeeper types.BankKeeper,
+	transferMiddlewareKeeper types.TransferMiddlewareKeeper,
 	ics4Wrapper porttypes.ICS4Wrapper,
 ) *keeper.Keeper {
 	storeKey := sdk.NewKVStoreKey(types.StoreKey)
 	i.StateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, i.DB)
 
-	subspace := paramsKeeper.Subspace(types.ModuleName)
+	govModuleAddress := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
+
 	packetforwardKeeper := keeper.NewKeeper(
 		i.Marshaler,
 		storeKey,
-		subspace,
 		transferKeeper,
 		channelKeeper,
 		distributionKeeper,
 		bankKeeper,
+		transferMiddlewareKeeper,
 		ics4Wrapper,
+		govModuleAddress,
 	)
 
 	return packetforwardKeeper

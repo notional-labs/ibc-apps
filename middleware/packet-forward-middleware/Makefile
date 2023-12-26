@@ -142,11 +142,12 @@ cosmovisor:
 .PHONY: build build-linux build-simd-all build-simd-linux cosmovisor
 
 mocks: $(MOCKS_DIR)
-	go install go.uber.org/mock/mockgen@v0.2.0
+	go install go.uber.org/mock/mockgen@v0.4.0
 	mockgen -package=mock -destination=./test/mock/transfer_keeper.go $(GOMOD)/packetforward/types TransferKeeper
 	mockgen -package=mock -destination=./test/mock/distribution_keeper.go $(GOMOD)/packetforward/types DistributionKeeper
 	mockgen -package=mock -destination=./test/mock/bank_keeper.go $(GOMOD)/packetforward/types BankKeeper
 	mockgen -package=mock -destination=./test/mock/channel_keeper.go $(GOMOD)/packetforward/types ChannelKeeper
+	mockgen -package=mock -mock_names=TransferKeeper=MockTransferMiddlewareKeeper,BankKeeper=MockTransferMiddlewareBankKeeper -self_package=github.com/cosmos/ibc-apps/v7/middleware/packet-forward-middleware/packetforward/types -destination=./test/mock/transfermiddleware_keeper.go -source=/Users/faddat/composable-cosmos/x/transfermiddleware/types/interface.go TransferKeeper,BankKeeper,TransferMiddlewareKeeper
 	mockgen -package=mock -destination=./test/mock/ics4_wrapper.go github.com/cosmos/ibc-go/v7/modules/core/05-port/types ICS4Wrapper
 	mockgen -package=mock -destination=./test/mock/ibc_module.go github.com/cosmos/ibc-go/v7/modules/core/05-port/types IBCModule
 
@@ -223,6 +224,12 @@ ictest-forward:
 
 ictest-timeout:
 	cd e2e && go test -race -v -timeout 15m -run TestTimeoutOnForward .
+
+ictest-upgrade:
+	cd e2e && go test -race -v -timeout 15m -run TestPFMUpgrade .
+
+ictest-nonrefundable:
+	cd e2e && go test -race -v -timeout 15m -run TestNonRefundable .
 
 ###############################################################################
 ###                                Linting                                  ###
