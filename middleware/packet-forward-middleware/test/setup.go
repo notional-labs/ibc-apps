@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/router"
-	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/router/keeper"
-	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/router/types"
+	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward"
+	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward/keeper"
+	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward/types"
 	"github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/test/mock"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -31,6 +31,7 @@ func NewTestSetup(t *testing.T, ctl *gomock.Controller) *Setup {
 	initializer := newInitializer()
 
 	transferKeeperMock := mock.NewMockTransferKeeper(ctl)
+	transferMiddlewareKeeperMock := mock.NewMockTransferMiddlewareKeeper(ctl)
 	channelKeeperMock := mock.NewMockChannelKeeper(ctl)
 	distributionKeeperMock := mock.NewMockDistributionKeeper(ctl)
 	bankKeeperMock := mock.NewMockBankKeeper(ctl)
@@ -38,29 +39,31 @@ func NewTestSetup(t *testing.T, ctl *gomock.Controller) *Setup {
 	ics4WrapperMock := mock.NewMockICS4Wrapper(ctl)
 
 	paramsKeeper := initializer.paramsKeeper()
-	routerKeeper := initializer.routerKeeper(paramsKeeper, transferKeeperMock, channelKeeperMock, distributionKeeperMock, bankKeeperMock, ics4WrapperMock)
-	// routerModule := initializer.routerModule(routerKeeper)
+	packetforwardKeeper := initializer.packetforwardKeeper(paramsKeeper, transferKeeperMock, transferMiddlewareKeeperMock, channelKeeperMock, distributionKeeperMock, bankKeeperMock, ics4WrapperMock)
 
 	require.NoError(t, initializer.StateStore.LoadLatestVersion())
 
-	routerKeeper.SetParams(initializer.Ctx, types.DefaultParams())
+	if err := packetforwardKeeper.SetParams(initializer.Ctx, types.DefaultParams()); err != nil {
+		t.Fatal(err)
+	}
 
 	return &Setup{
 		Initializer: initializer,
 
 		Keepers: &testKeepers{
-			ParamsKeeper: &paramsKeeper,
-			RouterKeeper: routerKeeper,
+			ParamsKeeper:        &paramsKeeper,
+			PacketForwardKeeper: packetforwardKeeper,
 		},
 
 		Mocks: &testMocks{
-			TransferKeeperMock:     transferKeeperMock,
-			DistributionKeeperMock: distributionKeeperMock,
-			IBCModuleMock:          ibcModuleMock,
-			ICS4WrapperMock:        ics4WrapperMock,
+			TransferKeeperMock:           transferKeeperMock,
+			TransferMiddlewareKeeperMock: transferMiddlewareKeeperMock,
+			DistributionKeeperMock:       distributionKeeperMock,
+			IBCModuleMock:                ibcModuleMock,
+			ICS4WrapperMock:              ics4WrapperMock,
 		},
 
-		ForwardMiddleware: initializer.forwardMiddleware(ibcModuleMock, routerKeeper, 0, keeper.DefaultForwardTransferPacketTimeoutTimestamp, keeper.DefaultRefundTransferPacketTimeoutTimestamp),
+		ForwardMiddleware: initializer.forwardMiddleware(ibcModuleMock, packetforwardKeeper, 0, keeper.DefaultForwardTransferPacketTimeoutTimestamp, keeper.DefaultRefundTransferPacketTimeoutTimestamp),
 	}
 }
 
@@ -70,19 +73,20 @@ type Setup struct {
 	Keepers *testKeepers
 	Mocks   *testMocks
 
-	ForwardMiddleware router.IBCMiddleware
+	ForwardMiddleware packetforward.IBCMiddleware
 }
 
 type testKeepers struct {
-	ParamsKeeper *paramskeeper.Keeper
-	RouterKeeper *keeper.Keeper
+	ParamsKeeper        *paramskeeper.Keeper
+	PacketForwardKeeper *keeper.Keeper
 }
 
 type testMocks struct {
-	TransferKeeperMock     *mock.MockTransferKeeper
-	DistributionKeeperMock *mock.MockDistributionKeeper
-	IBCModuleMock          *mock.MockIBCModule
-	ICS4WrapperMock        *mock.MockICS4Wrapper
+	TransferKeeperMock           *mock.MockTransferKeeper
+	TransferMiddlewareKeeperMock *mock.MockTransferMiddlewareKeeper
+	DistributionKeeperMock       *mock.MockDistributionKeeper
+	IBCModuleMock                *mock.MockIBCModule
+	ICS4WrapperMock              *mock.MockICS4Wrapper
 }
 
 type initializer struct {
@@ -126,9 +130,10 @@ func (i initializer) paramsKeeper() paramskeeper.Keeper {
 	return paramsKeeper
 }
 
-func (i initializer) routerKeeper(
+func (i initializer) packetforwardKeeper(
 	paramsKeeper paramskeeper.Keeper,
 	transferKeeper types.TransferKeeper,
+	transferMiddlewareKeeper types.TransferMiddlewareKeeper,
 	channelKeeper types.ChannelKeeper,
 	distributionKeeper types.DistributionKeeper,
 	bankKeeper types.BankKeeper,
@@ -137,21 +142,23 @@ func (i initializer) routerKeeper(
 	storeKey := sdk.NewKVStoreKey(types.StoreKey)
 	i.StateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, i.DB)
 
-	subspace := paramsKeeper.Subspace(types.ModuleName)
-	routerKeeper := keeper.NewKeeper(
+	govModuleAddress := "cosmos10d07y265gmmuvt4z0w9aw880jnsr700j6zn9kn"
+
+	packetforwardKeeper := keeper.NewKeeper(
 		i.Marshaler,
 		storeKey,
-		subspace,
 		transferKeeper,
 		channelKeeper,
 		distributionKeeper,
 		bankKeeper,
+		transferMiddlewareKeeper,
 		ics4Wrapper,
+		govModuleAddress,
 	)
 
-	return routerKeeper
+	return packetforwardKeeper
 }
 
-func (i initializer) forwardMiddleware(app porttypes.IBCModule, k *keeper.Keeper, retriesOnTimeout uint8, forwardTimeout time.Duration, refundTimeout time.Duration) router.IBCMiddleware {
-	return router.NewIBCMiddleware(app, k, retriesOnTimeout, forwardTimeout, refundTimeout)
+func (i initializer) forwardMiddleware(app porttypes.IBCModule, k *keeper.Keeper, retriesOnTimeout uint8, forwardTimeout time.Duration, refundTimeout time.Duration) packetforward.IBCMiddleware {
+	return packetforward.NewIBCMiddleware(app, k, retriesOnTimeout, forwardTimeout, refundTimeout)
 }
