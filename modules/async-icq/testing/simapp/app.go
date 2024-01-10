@@ -3,15 +3,13 @@ package simapp
 import (
 	"encoding/json"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 
 	icq "github.com/cosmos/ibc-apps/modules/async-icq/v7"
 	icqkeeper "github.com/cosmos/ibc-apps/modules/async-icq/v7/keeper"
+	upgrades "github.com/cosmos/ibc-apps/modules/async-icq/v7/testing/simapp/upgrades"
 	icqtypes "github.com/cosmos/ibc-apps/modules/async-icq/v7/types"
-	"github.com/gorilla/mux"
-	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 	"github.com/stretchr/testify/require"
 
@@ -112,8 +110,6 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
 	ibctesting "github.com/cosmos/ibc-go/v7/testing"
 	ibcmock "github.com/cosmos/ibc-go/v7/testing/mock"
-	"github.com/cosmos/ibc-go/v7/testing/simapp"
-	simappparams "github.com/cosmos/ibc-go/v7/testing/simapp/params"
 	ibctestingtypes "github.com/cosmos/ibc-go/v7/testing/types"
 )
 
@@ -168,6 +164,7 @@ var (
 		govtypes.ModuleName:            {authtypes.Burner},
 		icqtypes.ModuleName:            nil,
 		ibcmock.ModuleName:             nil,
+		// TODO: transfer module?
 	}
 )
 
@@ -213,8 +210,9 @@ type SimApp struct {
 	ConsensusParamsKeeper consensusparamkeeper.Keeper
 
 	// make scoped keepers public for test purposes
-	ScopedIBCKeeper capabilitykeeper.ScopedKeeper
-	ScopedICQKeeper capabilitykeeper.ScopedKeeper
+	ScopedIBCKeeper        capabilitykeeper.ScopedKeeper
+	ScopedICQKeeper        capabilitykeeper.ScopedKeeper
+	ScopedInterqueryKeeper capabilitykeeper.ScopedKeeper
 
 	// make IBC modules public for test purposes
 	// these modules are never directly routed to by the IBC Router
@@ -242,9 +240,11 @@ func init() {
 // NewSimApp returns a reference to an initialized SimApp.
 func NewSimApp(
 	logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest bool, skipUpgradeHeights map[int64]bool,
-	homePath string, invCheckPeriod uint, encodingConfig simappparams.EncodingConfig,
+	homePath string, invCheckPeriod uint,
 	appOpts servertypes.AppOptions, baseAppOptions ...func(*baseapp.BaseApp),
 ) *SimApp {
+	encodingConfig := MakeEncodingConfig()
+
 	appCodec := encodingConfig.Marshaler
 	legacyAmino := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
@@ -264,6 +264,8 @@ func NewSimApp(
 	//
 	// Further down we'd set the options in the AppBuilder like below.
 	// baseAppOptions = append(baseAppOptions, mempoolOpt, prepareOpt, processOpt)
+
+	authority := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 
 	bApp := baseapp.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), baseAppOptions...)
 	bApp.SetCommitMultiStoreTracer(traceStore)
@@ -435,12 +437,12 @@ func NewSimApp(
 	app.ICQKeeper = icqkeeper.NewKeeper(
 		appCodec,
 		keys[icqtypes.StoreKey],
-		app.GetSubspace(icqtypes.ModuleName),
 		app.IBCKeeper.ChannelKeeper, // may be replaced with middleware
 		app.IBCKeeper.ChannelKeeper,
 		&app.IBCKeeper.PortKeeper,
 		scopedICQKeeper,
 		app.BaseApp.GRPCQueryRouter(),
+		authority,
 	)
 
 	// Create IBC Router
@@ -512,7 +514,7 @@ func NewSimApp(
 		consensus.NewAppModule(appCodec, app.ConsensusParamsKeeper),
 
 		// IBC modules
-		icq.NewAppModule(app.ICQKeeper),
+		icq.NewAppModule(app.ICQKeeper, app.GetSubspace(icqtypes.ModuleName)),
 		mockModule,
 	)
 
@@ -579,6 +581,10 @@ func NewSimApp(
 	app.MountKVStores(keys)
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memKeys)
+
+	// register upgrade
+	app.setupUpgradeHandlers()
+	app.setupUpgradeStoreLoaders()
 
 	// initialize BaseApp
 	app.SetInitChainer(app.InitChainer)
@@ -762,11 +768,30 @@ func (app *SimApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APICon
 
 	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+}
 
-	// register swagger API from root so that other applications can override easily
-	if apiConfig.Swagger {
-		RegisterSwaggerAPI(clientCtx, apiSvr.Router)
-	}
+func (app *SimApp) setupUpgradeHandlers() {
+	app.UpgradeKeeper.SetUpgradeHandler(
+		upgrades.V2,
+		upgrades.CreateV2UpgradeHandler(app.mm, app.configurator, app.ParamsKeeper, app.ConsensusParamsKeeper, app.ICQKeeper),
+	)
+}
+
+// setupUpgradeStoreLoaders sets all necessary store loaders required by upgrades.
+func (app *SimApp) setupUpgradeStoreLoaders() {
+	// upgradeInfo, err := app.UpgradeKeeper.ReadUpgradeInfoFromDisk()
+	// if err != nil {
+	// 	tmos.Exit(fmt.Sprintf("failed to read upgrade info from disk %s", err))
+	// }
+
+	// // Future: if we want to fix the module name, we can do it here.
+	// if upgradeInfo.Name == upgrades.V2 && !app.UpgradeKeeper.IsSkipHeight(upgradeInfo.Height) {
+	// 	storeUpgrades := storetypes.StoreUpgrades{}
+	// 	}
+
+	// 	// configure store loader that checks if version == upgradeHeight and applies store upgrades
+	// 	app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+	// }
 }
 
 // RegisterTxService implements the Application.RegisterTxService method.
@@ -782,17 +807,6 @@ func (app *SimApp) RegisterTendermintService(clientCtx client.Context) {
 		app.interfaceRegistry,
 		app.Query,
 	)
-}
-
-// RegisterSwaggerAPI registers swagger route with API Server
-func RegisterSwaggerAPI(_ client.Context, rtr *mux.Router) {
-	statikFS, err := fs.New()
-	if err != nil {
-		panic(err)
-	}
-
-	staticServer := http.FileServer(statikFS)
-	rtr.PathPrefix("/swagger/").Handler(http.StripPrefix("/swagger/", staticServer))
 }
 
 func (app *SimApp) RegisterNodeService(context client.Context) {
@@ -828,9 +842,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 
 func SetupTestingApp() (ibctesting.TestingApp, map[string]json.RawMessage) {
 	db := dbm.NewMemDB()
-	encCdc := simapp.MakeTestEncodingConfig()
-	app := NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, simapp.DefaultNodeHome, 5, encCdc, EmptyAppOptions{})
-	return app, NewDefaultGenesisState(encCdc.Marshaler)
+	app := NewSimApp(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, EmptyAppOptions{})
+	return app, NewDefaultGenesisState(MakeEncodingConfig().Marshaler)
 }
 
 // EmptyAppOptions is a stub implementing AppOptions
