@@ -9,8 +9,8 @@ import (
 
 	types "github.com/cosmos/cosmos-sdk/types"
 	gomock "go.uber.org/mock/gomock"
-	transfermiddlewaretypes "github.com/notional-labs/centauri/v4/x/transfermiddleware/types"
 
+	pcktfrwdtypes "github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v7/packetforward/types"
 )
 
 // MockTransferMiddlewareKeeper is a mock of TransferMiddlewareKeeper interface.
@@ -60,17 +60,17 @@ func (mr *MockTransferMiddlewareKeeperMockRecorder) HasParachainIBCTokenInfoByAs
 
 
 // GetParachainIBCTokenInfoByNativeDenom mocks base method.
-func (m *MockTransferMiddlewareKeeper) GetParachainIBCTokenInfoByNativeDenom(arg0 types.Context, arg1 string) (transfermiddlewaretypes.ParachainIBCTokenInfo) {
+func (m *MockTransferMiddlewareKeeper) GetParachainIBCTokenInfoByNativeDenom(arg0 types.Context, arg1 string) (pcktfrwdtypes.ParaChainIBCTokenInfo) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetParachainIBCTokenInfoByNativeDenom", arg0, arg1)
-	ret0, _ := ret[0].(transfermiddlewaretypes.ParachainIBCTokenInfo)
+	ret0, _ := ret[0].(pcktfrwdtypes.ParaChainIBCTokenInfo)
 	return ret0
 }
 
 // GetParachainIBCTokenInfoByAssetID mocks base method.
-func (m *MockTransferMiddlewareKeeper) GetParachainIBCTokenInfoByAssetID(arg0 types.Context, arg1 string) (transfermiddlewaretypes.ParachainIBCTokenInfo) {
+func (m *MockTransferMiddlewareKeeper) GetParachainIBCTokenInfoByAssetID(arg0 types.Context, arg1 string) (pcktfrwdtypes.ParaChainIBCTokenInfo) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetParachainIBCTokenInfoByAssetID", arg0, arg1)
-	ret0, _ := ret[0].(transfermiddlewaretypes.ParachainIBCTokenInfo)
+	ret0, _ := ret[0].(pcktfrwdtypes.ParaChainIBCTokenInfo)
 	return ret0
 }

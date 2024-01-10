@@ -8,7 +8,6 @@ import (
 
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	channeltypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
-	transfermiddlewaretypes "github.com/notional-labs/centauri/v4/x/transfermiddleware/types"
 )
 
 // TransferKeeper defines the expected transfer keeper
@@ -45,6 +44,13 @@ type BankKeeper interface {
 type TransferMiddlewareKeeper interface {
 	HasParachainIBCTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) bool
 	HasParachainIBCTokenInfoByAssetID(ctx sdk.Context, assetID string) bool
-	GetParachainIBCTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) transfermiddlewaretypes.ParachainIBCTokenInfo
-	GetParachainIBCTokenInfoByAssetID(ctx sdk.Context, assetID string) transfermiddlewaretypes.ParachainIBCTokenInfo
+	GetParachainIBCTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) ParaChainIBCTokenInfo
+	GetParachainIBCTokenInfoByAssetID(ctx sdk.Context, assetID string) ParaChainIBCTokenInfo
+}
+
+// ParaChainIBCTokenInfo interface to avoid coupling import
+type ParaChainIBCTokenInfo interface {
+	GetNativeDenom() string
+	GetIbcDenom() string
+	GetChannelID() string
 }

@@ -28,8 +28,6 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	coretypes "github.com/cosmos/ibc-go/v7/modules/core/types"
-
-	transfermiddlewaretypes "github.com/notional-labs/centauri/v4/x/transfermiddleware/types"
 )
 
 var (
@@ -245,7 +243,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 
 			if transfertypes.SenderChainIsSource(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId, fullDenomPath) {
 				paraChainIBCTokenInfo, found := k.GetParachainTokenInfoByNativeDenom(ctx, data.Denom)
-				if found && (paraChainIBCTokenInfo.ChannelId == inFlightPacket.RefundChannelId) {
+				if found && (paraChainIBCTokenInfo.GetChannelID() == inFlightPacket.RefundChannelId) {
 					// if packet was forwarded from Picasso, we just need to burn the token in 2 escrow address
 					// parse the transfer amount
 					transferAmount, ok := sdk.NewIntFromString(data.Amount)
@@ -260,7 +258,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 						return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
 					}
 					// send ibc token to module address
-					ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.IbcDenom, transferAmount)
+					ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.GetIbcDenom(), transferAmount)
 					ibcEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
 					if err = k.bankKeeper.SendCoinsFromAccountToModule(
 						ctx, ibcEscrowAddress, transfertypes.ModuleName, sdk.NewCoins(ibcToken),
@@ -312,7 +310,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 			// Sender chain is sink
 			denomTrace := transfertypes.ParseDenomTrace(fullDenomPath)
 			paraChainIBCTokenInfo, found := k.GetParachainTokenInfoByAssetID(ctx, denomTrace.BaseDenom)
-			if found && (paraChainIBCTokenInfo.ChannelId == packet.SourceChannel) {
+			if found && (paraChainIBCTokenInfo.GetChannelID() == packet.SourceChannel) {
 				// This packet is forwared to picasso => Mint Ibc token and native token to escrow address
 				// parse the transfer amount
 				transferAmount, ok := sdk.NewIntFromString(data.Amount)
@@ -320,7 +318,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 					return errorsmod.Wrapf(transfertypes.ErrInvalidAmount, "unable to parse transfer amount: %s", data.Amount)
 				}
 				// send native token to native escrow address
-				nativeToken := sdk.NewCoin(paraChainIBCTokenInfo.NativeDenom, transferAmount)
+				nativeToken := sdk.NewCoin(paraChainIBCTokenInfo.GetNativeDenom(), transferAmount)
 				nativeEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
 				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(nativeToken)); err != nil {
 					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
@@ -330,7 +328,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 				}
 
 				// send ibc token to ibc escrow address
-				ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.IbcDenom, transferAmount)
+				ibcToken := sdk.NewCoin(paraChainIBCTokenInfo.GetIbcDenom(), transferAmount)
 				ibcEscrowAddress := transfertypes.GetEscrowAddress(packet.SourcePort, packet.SourceChannel)
 				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, sdk.NewCoins(ibcToken)); err != nil {
 					return fmt.Errorf("failed to send coins from escrow to module account for burn: %w", err)
@@ -610,24 +608,22 @@ func (k *Keeper) GetAndClearInFlightPacket(
 	return &inFlightPacket
 }
 
-func (k Keeper) GetParachainTokenInfoByAssetID(ctx sdk.Context, assetID string) (transfermiddlewaretypes.ParachainIBCTokenInfo, bool) {
-	var paraChainIBCTokenInfo transfermiddlewaretypes.ParachainIBCTokenInfo
+// GetParachainTokenInfoByAssetID returns the token info by assetID and if it was found
+func (k Keeper) GetParachainTokenInfoByAssetID(ctx sdk.Context, assetID string) (prcTokenInfo types.ParaChainIBCTokenInfo, found bool) {
 	if !k.transferMiddlewareKeeper.HasParachainIBCTokenInfoByAssetID(ctx, assetID) {
-		return paraChainIBCTokenInfo, false
+		return prcTokenInfo, false
 	}
 
-	paraChainIBCTokenInfo = k.transferMiddlewareKeeper.GetParachainIBCTokenInfoByAssetID(ctx, assetID)
-	return paraChainIBCTokenInfo, true
+	return k.transferMiddlewareKeeper.GetParachainIBCTokenInfoByAssetID(ctx, assetID), true
 }
 
-func (k Keeper) GetParachainTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) (transfermiddlewaretypes.ParachainIBCTokenInfo, bool) {
-	var paraChainIBCTokenInfo transfermiddlewaretypes.ParachainIBCTokenInfo
+// GetParachainTokenInfoByNativeDenom returns the token info by denom and if it was found
+func (k Keeper) GetParachainTokenInfoByNativeDenom(ctx sdk.Context, nativeDenom string) (prcTokenInfo types.ParaChainIBCTokenInfo, found bool) {
 	if !k.transferMiddlewareKeeper.HasParachainIBCTokenInfoByNativeDenom(ctx, nativeDenom) {
-		return paraChainIBCTokenInfo, false
+		return prcTokenInfo, false
 	}
 
-	paraChainIBCTokenInfo = k.transferMiddlewareKeeper.GetParachainIBCTokenInfoByNativeDenom(ctx, nativeDenom)
-	return paraChainIBCTokenInfo, true
+	return k.transferMiddlewareKeeper.GetParachainIBCTokenInfoByNativeDenom(ctx, nativeDenom), true
 }
 
 // SendPacket wraps IBC ChannelKeeper's SendPacket function

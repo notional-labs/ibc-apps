@@ -18,7 +18,6 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/iancoleman/orderedmap v0.2.0
-	github.com/notional-labs/centauri/v4 v4.0.0
 	github.com/rakyll/statik v0.1.7
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
@@ -175,5 +174,3 @@ require (
 	pgregory.net/rapid v0.5.5 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace github.com/notional-labs/centauri/v4 => github.com/notional-labs/composable-centauri/v4 v4.0.0-20230719071809-dd43d7a38418
