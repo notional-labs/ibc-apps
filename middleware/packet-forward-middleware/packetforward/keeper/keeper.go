@@ -232,7 +232,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 			}
 		}
 
-		amount, ok := sdkmath.NewIntFromString(data.Amount)
+		amount, ok := sdk.NewIntFromString(data.Amount)
 		if !ok {
 			return fmt.Errorf("failed to parse amount from packet data for forward refund: %s", data.Amount)
 		}
@@ -285,13 +285,14 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 				} else {
 					// transfer funds from escrow account for forwarded packet to escrow account going back for refund.
 
-					refundEscrowAddress := transfertypes.GetEscrowAddress(inFlightPacket.RefundPortId, inFlightPacket.RefundChannelId)
-
 					if err := k.bankKeeper.SendCoins(
-						ctx, escrowAddress, refundEscrowAddress, sdk.NewCoins(token),
+						ctx, escrowAddress, refundEscrowAddress, newToken,
 					); err != nil {
 						return fmt.Errorf("failed to send coins from escrow account to refund escrow account: %w", err)
 					}
+					// We move funds from the escrowAddress in both cases,
+					// update the total escrow amount for the denom.
+					// k.unescrowToken(ctx, token)
 				}
 			} else {
 				// transfer the coins from the escrow account to the module account and burn them.
@@ -309,6 +310,9 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 					// to burn.
 					panic(fmt.Sprintf("cannot burn coins after a successful send from escrow account to module account: %v", err))
 				}
+				// We move funds from the escrowAddress in both cases,
+				// update the total escrow amount for the denom.
+				// k.unescrowToken(ctx, token)
 			}
 		} else {
 			// Sender chain is sink
@@ -340,6 +344,21 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, ibcEscrowAddress, sdk.NewCoins(ibcToken)); err != nil {
 					panic(err)
 				}
+			} else {
+				// Funds in the escrow account were burned,
+				// so on a timeout or acknowledgement error we need to mint the funds back to the escrow account.
+				if err := k.bankKeeper.MintCoins(ctx, transfertypes.ModuleName, newToken); err != nil {
+					return fmt.Errorf("cannot mint coins to the %s module account: %v", transfertypes.ModuleName, err)
+				}
+
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, transfertypes.ModuleName, refundEscrowAddress, newToken); err != nil {
+					return fmt.Errorf("cannot send coins from the %s module to the escrow account %s: %v", transfertypes.ModuleName, refundEscrowAddress, err)
+				}
+
+				// TODO: do migration such that this numbers match
+				// currentTotalEscrow := k.transferKeeper.GetTotalEscrowForDenom(ctx, token.GetDenom())
+				// newTotalEscrow := currentTotalEscrow.Add(token)
+				// k.transferKeeper.SetTotalEscrowForDenom(ctx, newTotalEscrow)
 			}
 		}
 	}
