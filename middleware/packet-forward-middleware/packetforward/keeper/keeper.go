@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/go-metrics"
 
 	errorsmod "cosmossdk.io/errors"
-	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 
