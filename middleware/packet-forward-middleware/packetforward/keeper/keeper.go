@@ -14,13 +14,13 @@ import (
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 
+	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
-	"github.com/cometbft/cometbft/libs/log"
+	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -48,8 +48,9 @@ var (
 
 // Keeper defines the packet forward middleware keeper
 type Keeper struct {
-	cdc      codec.BinaryCodec
-	storeKey storetypes.StoreKey
+	cdc        codec.BinaryCodec
+	storeKey   storetypes.StoreKey
+	paramSpace paramtypes.Subspace
 
 	transferKeeper           types.TransferKeeper
 	channelKeeper            types.ChannelKeeper
@@ -57,12 +58,17 @@ type Keeper struct {
 	bankKeeper               types.BankKeeper
 	transferMiddlewareKeeper types.TransferMiddlewareKeeper
 	ics4Wrapper              porttypes.ICS4Wrapper
+
+	// the address capable of executing a MsgUpdateParams message. Typically, this
+	// should be the x/gov module account.
+	authority string
 }
 
 // NewKeeper creates a new forward Keeper instance
 func NewKeeper(
 	cdc codec.BinaryCodec,
 	key storetypes.StoreKey,
+	paramSpace paramtypes.Subspace,
 	transferKeeper types.TransferKeeper,
 	channelKeeper types.ChannelKeeper,
 	distrKeeper types.DistributionKeeper,
@@ -71,6 +77,11 @@ func NewKeeper(
 	ics4Wrapper porttypes.ICS4Wrapper,
 	authority string,
 ) *Keeper {
+	// set KeyTable if it has not already been set
+	if !paramSpace.HasKeyTable() {
+		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
+	}
+
 	return &Keeper{
 		cdc:                      cdc,
 		storeKey:                 key,
@@ -81,6 +92,7 @@ func NewKeeper(
 		bankKeeper:               bankKeeper,
 		transferMiddlewareKeeper: transferMiddlewareKeeper,
 		ics4Wrapper:              ics4Wrapper,
+		authority:                authority,
 	}
 }
 
@@ -242,7 +254,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 				if found && (paraChainIBCTokenInfo.ChannelID == inFlightPacket.RefundChannelId) {
 					// if packet was forwarded from Picasso, we just need to burn the token in 2 escrow address
 					// parse the transfer amount
-					transferAmount, ok := sdk.NewIntFromString(data.Amount)
+					transferAmount, ok := sdkmath.NewIntFromString(data.Amount)
 					if !ok {
 						return errorsmod.Wrapf(transfertypes.ErrInvalidAmount, "unable to parse transfer amount: %s", data.Amount)
 					}
@@ -305,7 +317,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 			if found && (paraChainIBCTokenInfo.ChannelID == packet.SourceChannel) {
 				// This packet is forwared to picasso => Mint Ibc token and native token to escrow address
 				// parse the transfer amount
-				transferAmount, ok := sdk.NewIntFromString(data.Amount)
+				transferAmount, ok := sdkmath.NewIntFromString(data.Amount)
 				if !ok {
 					return errorsmod.Wrapf(transfertypes.ErrInvalidAmount, "unable to parse transfer amount: %s", data.Amount)
 				}
