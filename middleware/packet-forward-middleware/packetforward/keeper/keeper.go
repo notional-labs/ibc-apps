@@ -232,7 +232,7 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 			}
 		}
 
-		amount, ok := sdk.NewIntFromString(data.Amount)
+		amount, ok := sdkmath.NewIntFromString(data.Amount)
 		if !ok {
 			return fmt.Errorf("failed to parse amount from packet data for forward refund: %s", data.Amount)
 		}
