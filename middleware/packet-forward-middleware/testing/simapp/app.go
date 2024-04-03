@@ -494,10 +494,11 @@ func NewSimApp(
 	app.PacketForwardKeeper = packetforwardkeeper.NewKeeper(
 		appCodec,
 		app.keys[packetforwardtypes.StoreKey],
-		nil, // Will be zero-value here. Reference is set later on with SetTransferKeeper.
+		app.TransferKeeper,
 		app.IBCKeeper.ChannelKeeper,
 		app.DistrKeeper,
 		app.BankKeeper,
+		nil,
 		app.IBCKeeper.ChannelKeeper,
 		authority,
 	)

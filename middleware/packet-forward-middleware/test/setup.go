@@ -151,6 +151,7 @@ func (i initializer) packetforwardKeeper(
 		channelKeeper,
 		distributionKeeper,
 		bankKeeper,
+		nil,
 		ics4Wrapper,
 		govModuleAddress,
 	)

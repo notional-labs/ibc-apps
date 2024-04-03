@@ -20,7 +20,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
@@ -48,9 +47,8 @@ var (
 
 // Keeper defines the packet forward middleware keeper
 type Keeper struct {
-	cdc        codec.BinaryCodec
-	storeKey   storetypes.StoreKey
-	paramSpace paramtypes.Subspace
+	cdc      codec.BinaryCodec
+	storeKey storetypes.StoreKey
 
 	transferKeeper           types.TransferKeeper
 	channelKeeper            types.ChannelKeeper
@@ -68,7 +66,6 @@ type Keeper struct {
 func NewKeeper(
 	cdc codec.BinaryCodec,
 	key storetypes.StoreKey,
-	paramSpace paramtypes.Subspace,
 	transferKeeper types.TransferKeeper,
 	channelKeeper types.ChannelKeeper,
 	distrKeeper types.DistributionKeeper,
@@ -77,17 +74,12 @@ func NewKeeper(
 	ics4Wrapper porttypes.ICS4Wrapper,
 	authority string,
 ) *Keeper {
-	// set KeyTable if it has not already been set
-	if !paramSpace.HasKeyTable() {
-		paramSpace = paramSpace.WithKeyTable(types.ParamKeyTable())
-	}
 
 	return &Keeper{
 		cdc:                      cdc,
 		storeKey:                 key,
 		transferKeeper:           transferKeeper,
 		channelKeeper:            channelKeeper,
-		paramSpace:               paramSpace,
 		distrKeeper:              distrKeeper,
 		bankKeeper:               bankKeeper,
 		transferMiddlewareKeeper: transferMiddlewareKeeper,
