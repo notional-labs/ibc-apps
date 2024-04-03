@@ -225,7 +225,7 @@ replace (
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/notional-labs/composable/v6 => github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240402101744-ab921d53b6a8
+	github.com/notional-labs/composable/v6 => github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240403080132-e3680765299f
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common => github.com/prometheus/common v0.47.0
 

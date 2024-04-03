@@ -1201,8 +1201,8 @@ github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f h1:KUppIJq7/+
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/grpc-proxy v0.0.0-20181017164139-0f1106ef9c76/go.mod h1:x5OoJHDHqxHS801UIuhqGl6QdSAEJvtausosHSdazIo=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240402101744-ab921d53b6a8 h1:YCKHg1sReeeAztCZTsOcj70LfFf0/j+QeL2sFXLfacQ=
-github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240402101744-ab921d53b6a8/go.mod h1:Zu1tx9NsjFTTi8hNH+kOQtKc+YntUrC/PPv31iSRk3o=
+github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240403080132-e3680765299f h1:UdQMX7T3O+L4B8Y4Gh4xTShizLbiKc9k/3Cxe6Z+ixA=
+github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240403080132-e3680765299f/go.mod h1:/UN3M25sWNSzpwlyf4nhAdaNm8zqxBn8F0q/QcK5otY=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
