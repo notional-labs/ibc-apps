@@ -194,9 +194,9 @@ func (k *Keeper) WriteAcknowledgementForForwardedPacket(
 		if inFlightPacket.Nonrefundable {
 			// we are not allowed to refund back to the source chain.
 			// attempt to move funds to user recoverable account on this chain.
-			if err := k.moveFundsToUserRecoverableAccount(ctx, packet, data, inFlightPacket); err != nil {
-				return err
-			}
+			//if err := k.moveFundsToUserRecoverableAccount(ctx, packet, data, inFlightPacket); err != nil {
+			//	return err
+			//}
 
 			ackResult := fmt.Sprintf("packet forward failed after point of no return: %s", ack.GetError())
 			newAck := channeltypes.NewResultAcknowledgement([]byte(ackResult))
