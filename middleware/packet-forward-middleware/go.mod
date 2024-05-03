@@ -23,7 +23,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/cosmos/gogoproto v1.4.12
 	github.com/cosmos/ibc-go/modules/capability v1.0.0
-	github.com/cosmos/ibc-go/v8 v8.1.1
+	github.com/cosmos/ibc-go/v8 v8.2.1
 	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
@@ -225,7 +225,7 @@ replace (
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.9.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	github.com/notional-labs/composable/v6 => github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240402101744-ab921d53b6a8
+	github.com/notional-labs/composable/v6 => github.com/notional-labs/composable-cosmos/v6 v6.0.0-20240503025256-034cb021366b
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
 	github.com/prometheus/common => github.com/prometheus/common v0.47.0
 

@@ -10,7 +10,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/cosmos/gogoproto v1.4.12
 	github.com/cosmos/ibc-apps/middleware/packet-forward-middleware/v8 v8.0.0-00010101000000-000000000000
-	github.com/cosmos/ibc-go/v8 v8.1.1
+	github.com/cosmos/ibc-go/v8 v8.2.1
 	github.com/docker/docker v24.0.7+incompatible
 	// https://github.com/strangelove-ventures/interchaintest/pull/933
 	github.com/strangelove-ventures/interchaintest/v8 v8.0.1-0.20240104215144-7c10b9dfa2ad
